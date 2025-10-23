@@ -1,287 +1,110 @@
-"""
-Data loading and preprocessing for GTSRB dataset
-Handles Train.csv, Test.csv and image folders
-"""
-import os
-import cv2
-import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.utils import to_categorical
-from tqdm import tqdm
-import config
+import numpy as np
+import os
+from PIL import Image
+import cv2
 
-
-def load_images_from_csv(csv_path, base_dir):
-    """
-    Load images using CSV file
+class GTSRBDataLoader:
+    """Handles loading of GTSRB dataset"""
+    TARGET_SIZE = (32, 32)
     
-    Args:
-        csv_path: Path to CSV file (Train.csv or Test.csv)
-        base_dir: Base directory for images (should be data/raw/)
+    def __init__(self, data_dir='data'):
+        self.data_dir = data_dir
+        self.class_names = self._load_class_names()
     
-    Returns:
-        images: numpy array of images
-        labels: numpy array of labels
-    """
-    print(f"\nLoading data from: {csv_path}")
-    
-    # Read CSV
-    df = pd.read_csv(csv_path)
-    print(f"Total entries in CSV: {len(df)}")
-    print(f"CSV columns: {df.columns.tolist()}")
-    
-    images = []
-    labels = []
-    
-    # Load each image
-    successful = 0
-    failed = 0
-    
-    for idx, row in tqdm(df.iterrows(), total=len(df), desc="Loading images"):
+    def _load_class_names(self):
+        """Load class names from Meta folder"""
+        # Default class names mapping
+        default_names = {
+            0: 'Speed limit (20km/h)', 1: 'Speed limit (30km/h)', 2: 'Speed limit (50km/h)',
+            3: 'Speed limit (60km/h)', 4: 'Speed limit (70km/h)', 5: 'Speed limit (80km/h)',
+            6: 'End of speed limit (80km/h)', 7: 'Speed limit (100km/h)', 8: 'Speed limit (120km/h)',
+            9: 'No passing', 10: 'No passing for vehicles over 3.5 metric tons',
+            11: 'Right-of-way at the next intersection', 12: 'Priority road', 13: 'Yield',
+            14: 'Stop', 15: 'No vehicles', 16: 'Vehicles over 3.5 metric tons prohibited',
+            17: 'No entry', 18: 'General caution', 19: 'Dangerous curve to the left',
+            20: 'Dangerous curve to the right', 21: 'Double curve', 22: 'Bumpy road',
+            23: 'Slippery road', 24: 'Road narrows on the right', 25: 'Road work',
+            26: 'Traffic signals', 27: 'Pedestrians', 28: 'Children crossing',
+            29: 'Bicycles crossing', 30: 'Beware of ice/snow', 31: 'Wild animals crossing',
+            32: 'End of all speed and passing limits', 33: 'Turn right ahead',
+            34: 'Turn left ahead', 35: 'Ahead only', 36: 'Go straight or right',
+            37: 'Go straight or left', 38: 'Keep right', 39: 'Keep left',
+            40: 'Roundabout mandatory', 41: 'End of no passing',
+            42: 'End of no passing by vehicles over 3.5 metric tons'
+        }
+        
         try:
-            # Get path from CSV (e.g., "Train/20/00020_00000_00000.png")
-            img_relative_path = str(row['Path'])
-            
-            # Construct full path: data/raw/ + Train/20/00020_00000_00000.png
-            img_path = os.path.join(base_dir, img_relative_path)
-            
-            # Read image
-            if os.path.exists(img_path):
-                img = cv2.imread(img_path)
-                if img is not None:
-                    # Convert BGR to RGB
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    target_size = (config.IMG_WIDTH, config.IMG_HEIGHT)
-                    img_resized = cv2.resize(img, target_size)
-                    images.append(img_resized)
-                    labels.append(int(row['ClassId']))
-                    successful += 1
-                else:
-                    failed += 1
-                    if failed <= 3:
-                        print(f"Warning: Could not read image: {img_path}")
+            meta_path = os.path.join(self.data_dir, 'Meta', 'signnames.csv')
+            if os.path.exists(meta_path):
+                df = pd.read_csv(meta_path)
+                return dict(zip(df['ClassId'], df['SignName']))
             else:
-                failed += 1
-                if failed <= 3:
-                    print(f"Warning: Image not found: {img_path}")
-        
+                # Create Meta directory and save default names
+                os.makedirs(os.path.join(self.data_dir, 'Meta'), exist_ok=True)
+                # Save default names to CSV
+                df = pd.DataFrame(list(default_names.items()), columns=['ClassId', 'SignName'])
+                df.to_csv(meta_path, index=False)
+                print(f"Created signnames.csv at {meta_path}")
+                return default_names
         except Exception as e:
-            failed += 1
-            if failed <= 3:
-                print(f"Error loading image at index {idx}: {e}")
+            print(f"Warning: Could not load class names: {e}")
+            return default_names
     
-    print(f"\nSuccessfully loaded: {successful} images")
-    if failed > 0:
-        print(f"Failed to load: {failed} images")
-    
-    if successful == 0:
-        print("\n❌ ERROR: No images were loaded!")
-        print("Please check:")
-        print("1. CSV file paths are correct")
-        print("2. Image files exist in the folders")
-        print("3. Path format in CSV matches actual folder structure")
-    
-    return np.array(images), np.array(labels)
-
-
-def load_images_from_folders(base_dir):
-    """
-    Load images directly from class folders (backup method)
-    Assumes structure: base_dir/0/, base_dir/1/, ..., base_dir/42/
-    
-    Args:
-        base_dir: Base directory containing class folders
-    
-    Returns:
-        images: numpy array of images
-        labels: numpy array of labels
-    """
-    print(f"\nLoading images from folder structure: {base_dir}")
-    
-    images = []
-    labels = []
-    
-    # Get class folders (0-42)
-    class_folders = sorted([f for f in os.listdir(base_dir) 
-                          if os.path.isdir(os.path.join(base_dir, f)) and f.isdigit()])
-    
-    if not class_folders:
-        print(f"ERROR: No class folders found in {base_dir}")
-        return np.array([]), np.array([])
-    
-    print(f"Found {len(class_folders)} class folders")
-    
-    for class_id in tqdm(class_folders, desc="Loading classes"):
-        class_path = os.path.join(base_dir, class_id)
+    def load_data(self, split='Train'):
+        """
+        Load images and labels from Train or Test folder
         
-        # Get all images in this class folder
-        image_files = [f for f in os.listdir(class_path) 
-                      if f.lower().endswith(('.ppm', '.png', '.jpg', '.jpeg'))]
+        Args:
+            split: 'Train' or 'Test'
         
-        for img_name in image_files:
-            img_path = os.path.join(class_path, img_name)
-            img = cv2.imread(img_path)
+        Returns:
+            images: numpy array of images
+            labels: numpy array of labels
+        """
+        csv_path = os.path.join(self.data_dir, f'{split}.csv')
+        
+        if not os.path.exists(csv_path):
+            # The FileNotFoundError will stop execution before the ModelEvaluator tries to load data
+            raise FileNotFoundError(f"CSV file not found: {csv_path}")
+        
+        df = pd.read_csv(csv_path)
+        
+        images = []
+        labels = []
+        
+        print(f"Loading {split} data...")
+        for idx, row in df.iterrows():
+            # row['Path'] in Train.csv is relative to the data_dir (e.g., 'Train/0/00000.ppm')
+            img_path = os.path.join(self.data_dir, row['Path'])
             
-            if img is not None:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                images.append(img)
-                labels.append(int(class_id))
-    
-    print(f"Successfully loaded {len(images)} images from {len(class_folders)} classes")
-    
-    return np.array(images), np.array(labels)
-
-
-def preprocess_images(images, target_size=(32, 32)):
-    """
-    Preprocess images: resize and normalize
-    
-    Args:
-        images: Array of images
-        target_size: Target size (height, width)
-    
-    Returns:
-        Preprocessed images
-    """
-    if len(images) == 0:
-        return np.array([])
-    
-    processed = []
-    
-    print(f"\nPreprocessing {len(images)} images to size {target_size}...")
-    
-    for img in tqdm(images, desc="Preprocessing"):
-        # Resize to target size
-        img_resized = cv2.resize(img, target_size)
+            if os.path.exists(img_path):
+                # Use cv2.IMREAD_COLOR to ensure 3 channels
+                img = cv2.imread(img_path, cv2.IMREAD_COLOR) 
+                
+                if img is not None:
+                    # 1. Convert BGR to RGB (OpenCV default is BGR)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                    
+                    # 2. **FIX: Resize the image to a fixed size**
+                    # This ensures all images have the same shape for np.array() conversion
+                    img_resized = cv2.resize(img, self.TARGET_SIZE)
+                    
+                    images.append(img_resized) 
+                    labels.append(row['ClassId'])
+                
+            
+            if (idx + 1) % 5000 == 0:
+                print(f"Loaded {len(images)}/{len(df)} images")
         
-        # Normalize pixel values to [0, 1]
-        img_normalized = img_resized.astype('float32') / 255.0
+        # --- FIX: Explicitly return the arrays ---
         
-        processed.append(img_normalized)
-    
-    return np.array(processed)
-
-
-def load_gtsrb_dataset():
-    """
-    Load complete GTSRB dataset from your structure
-    
-    Returns:
-        X_train, y_train: Training data
-        X_val, y_val: Validation data
-        X_test, y_test: Test data
-    """
-    print("=" * 70)
-    print("LOADING GTSRB DATASET")
-    print("=" * 70)
-    
-    # Check if files/folders exist
-    if not os.path.exists(config.TRAIN_DIR):
-        raise FileNotFoundError(f"Train folder not found at: {config.TRAIN_DIR}")
-    if not os.path.exists(config.TEST_DIR):
-        raise FileNotFoundError(f"Test folder not found at: {config.TEST_DIR}")
-    if not os.path.exists(config.TRAIN_CSV):
-        raise FileNotFoundError(f"Train.csv not found at: {config.TRAIN_CSV}")
-    if not os.path.exists(config.TEST_CSV):
-        raise FileNotFoundError(f"Test.csv not found at: {config.TEST_CSV}")
-    
-    # Load training data
-    print("\n[1/4] Loading Training Data...")
-    # Pass RAW_DATA_DIR (data/raw/) not TRAIN_DIR
-    # Because CSV paths are like "Train/20/image.png" relative to data/raw/
-    X_train_raw, y_train_full = load_images_from_csv(
-        config.TRAIN_CSV, 
-        config.RAW_DATA_DIR  # Important: use RAW_DATA_DIR not TRAIN_DIR
-    )
-    
-    if len(X_train_raw) == 0:
-        raise ValueError("Failed to load training data! Check dataset structure.")
-    
-    # Load test data
-    print("\n[2/4] Loading Test Data...")
-    X_test_raw, y_test = load_images_from_csv(
-        config.TEST_CSV,
-        config.RAW_DATA_DIR  # Important: use RAW_DATA_DIR not TEST_DIR
-    )
-    
-    # If test data fails, create test split from training data
-    if len(X_test_raw) == 0:
-        print("Warning: Could not load test data, will split from training data")
-        X_train_raw, X_test_raw, y_train_full, y_test = train_test_split(
-            X_train_raw, y_train_full,
-            test_size=0.15,
-            random_state=42,
-            stratify=y_train_full
-        )
-    
-    # Print class distribution
-    print("\n" + "=" * 70)
-    print("CLASS DISTRIBUTION")
-    print("=" * 70)
-    unique_train, counts_train = np.unique(y_train_full, return_counts=True)
-    unique_test, counts_test = np.unique(y_test, return_counts=True)
-    print(f"Number of classes (train): {len(unique_train)}")
-    print(f"Number of classes (test): {len(unique_test)}")
-    print(f"Total training samples: {len(y_train_full)}")
-    print(f"Total test samples: {len(y_test)}")
-    print(f"Class range: {unique_train.min()} to {unique_train.max()}")
-    
-    # Show class distribution
-    print("\nTraining samples per class:")
-    for cls, count in zip(unique_train[:10], counts_train[:10]):
-        print(f"  Class {cls}: {count} samples")
-    if len(unique_train) > 10:
-        print(f"  ... (showing first 10 of {len(unique_train)} classes)")
-    
-    # Split training data into train and validation
-    print("\n[3/4] Creating Train/Validation Split...")
-    X_train_raw, X_val_raw, y_train, y_val = train_test_split(
-        X_train_raw, 
-        y_train_full,
-        test_size=config.VALIDATION_SPLIT,
-        random_state=42,
-        stratify=y_train_full
-    )
-    
-    # Preprocess all images
-    print("\n[4/4] Preprocessing Images...")
-    print("=" * 70)
-    
-    X_train = preprocess_images(X_train_raw, (config.IMG_HEIGHT, config.IMG_WIDTH))
-    X_val = preprocess_images(X_val_raw, (config.IMG_HEIGHT, config.IMG_WIDTH))
-    X_test = preprocess_images(X_test_raw, (config.IMG_HEIGHT, config.IMG_WIDTH))
-    
-    # Convert labels to categorical (one-hot encoding)
-    print("\nConverting labels to categorical...")
-    y_train = to_categorical(y_train, config.NUM_CLASSES)
-    y_val = to_categorical(y_val, config.NUM_CLASSES)
-    y_test = to_categorical(y_test, config.NUM_CLASSES)
-    
-    # Final summary
-    print("\n" + "=" * 70)
-    print("DATASET SUMMARY")
-    print("=" * 70)
-    print(f"Training samples:   {X_train.shape[0]:>6}")
-    print(f"Validation samples: {X_val.shape[0]:>6}")
-    print(f"Test samples:       {X_test.shape[0]:>6}")
-    print(f"Image shape:        {X_train.shape[1:]}")
-    print(f"Number of classes:  {config.NUM_CLASSES}")
-    print("=" * 70 + "\n")
-    
-    return X_train, y_train, X_val, y_val, X_test, y_test
-
-
-if __name__ == "__main__":
-    # Test data loading
-    try:
-        X_train, y_train, X_val, y_val, X_test, y_test = load_gtsrb_dataset()
-        print("✅ Data loading successful!")
-        print(f"\nSample statistics:")
-        print(f"  Train shape: {X_train.shape}")
-        print(f"  Train min: {X_train.min():.3f}, max: {X_train.max():.3f}")
-        print(f"  Label shape: {y_train.shape}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
+        if len(images) == 0:
+            print(f"WARNING: No images were loaded from {csv_path}. Returning empty arrays.")
+            return np.array([]), np.array([])
+            
+        # This conversion now succeeds because all images in the list have the same size.
+        images = np.array(images)
+        labels = np.array(labels)
+        
+        return images, labels # <-- Explicit return of the expected tuple

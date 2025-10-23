@@ -1,113 +1,141 @@
-"""
-CNN model architectures for traffic sign classification
-1. Custom CNN
-2. MobileNet (Transfer Learning)
-"""
-from tensorflow import keras
-from tensorflow.keras import layers
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import (
+    Conv2D, MaxPooling2D, Flatten, Dense, 
+    Dropout, BatchNormalization, Input
+)
 from tensorflow.keras.applications import MobileNetV2
-import config
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import (
+    EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+)
 
-
-def create_cnn_model(input_shape=(32, 32, 3), num_classes=43):
-    """
-    Create custom CNN model
+class TrafficSignModel:
+    """Handles model architecture and training"""
     
-    Architecture:
-    - 3 Convolutional blocks with batch normalization and dropout
-    - Dense layers with regularization
-    - ~500K parameters
-    """
+    def __init__(self, input_shape=(32, 32, 3), num_classes=43):
+        self.input_shape = input_shape
+        self.num_classes = num_classes
     
-    model = keras.Sequential([
-        # Input layer
-        layers.Input(shape=input_shape),
+    def build_custom_cnn(self):
+        """
+        Build custom CNN architecture
         
-        # Conv Block 1
-        layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-        layers.BatchNormalization(),
-        layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-        layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
-        layers.Dropout(0.25),
+        Returns:
+            Keras model
+        """
+        model = Sequential([
+            # First Conv Block
+            Conv2D(32, (3, 3), activation='relu', padding='same', 
+                   input_shape=self.input_shape),
+            BatchNormalization(),
+            Conv2D(32, (3, 3), activation='relu', padding='same'),
+            BatchNormalization(),
+            MaxPooling2D((2, 2)),
+            Dropout(0.25),
+            
+            # Second Conv Block
+            Conv2D(64, (3, 3), activation='relu', padding='same'),
+            BatchNormalization(),
+            Conv2D(64, (3, 3), activation='relu', padding='same'),
+            BatchNormalization(),
+            MaxPooling2D((2, 2)),
+            Dropout(0.25),
+            
+            # Third Conv Block
+            Conv2D(128, (3, 3), activation='relu', padding='same'),
+            BatchNormalization(),
+            Conv2D(128, (3, 3), activation='relu', padding='same'),
+            BatchNormalization(),
+            MaxPooling2D((2, 2)),
+            Dropout(0.4),
+            
+            # Fully Connected Layers
+            Flatten(),
+            Dense(512, activation='relu'),
+            BatchNormalization(),
+            Dropout(0.5),
+            Dense(256, activation='relu'),
+            BatchNormalization(),
+            Dropout(0.5),
+            Dense(self.num_classes, activation='softmax')
+        ])
         
-        # Conv Block 2
-        layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-        layers.BatchNormalization(),
-        layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-        layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
-        layers.Dropout(0.25),
+        return model
+    
+    def build_mobilenet(self):
+        """
+        Build MobileNetV2 transfer learning model
         
-        # Conv Block 3
-        layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
-        layers.BatchNormalization(),
-        layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
-        layers.BatchNormalization(),
-        layers.MaxPooling2D((2, 2)),
-        layers.Dropout(0.4),
+        Returns:
+            Keras model
+        """
+        # Load pre-trained MobileNetV2
+        base_model = MobileNetV2(
+            input_shape=self.input_shape,
+            include_top=False,
+            weights='imagenet'
+        )
         
-        # Flatten and Dense layers
-        layers.Flatten(),
-        layers.Dense(512, activation='relu'),
-        layers.BatchNormalization(),
-        layers.Dropout(0.5),
-        layers.Dense(num_classes, activation='softmax')
-    ], name='CustomCNN')
+        # Freeze base model layers
+        base_model.trainable = False
+        
+        # Add custom classification head
+        inputs = Input(shape=self.input_shape)
+        x = base_model(inputs, training=False)
+        x = Flatten()(x)
+        x = Dense(256, activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
+        x = Dense(128, activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.3)(x)
+        outputs = Dense(self.num_classes, activation='softmax')(x)
+        
+        model = Model(inputs, outputs)
+        
+        return model
     
-    return model
-
-
-def create_mobilenet_model(input_shape=(32, 32, 3), num_classes=43):
-    """
-    Create MobileNet model with transfer learning
+    def compile_model(self, model, learning_rate=0.001):
+        """
+        Compile model with optimizer and loss
+        
+        Args:
+            model: Keras model
+            learning_rate: learning rate for optimizer
+        """
+        model.compile(
+            optimizer=Adam(learning_rate=learning_rate),
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        return model
     
-    Architecture:
-    - Pre-trained MobileNetV2 base (frozen)
-    - Custom classification head
-    - ~2M parameters (frozen base)
-    """
-    
-    # Input
-    inputs = layers.Input(shape=input_shape)
-    
-    # Resize for MobileNet (requires at least 32x32, but works better with larger)
-    # Upscale to 96x96 for better feature extraction
-    x = layers.UpSampling2D(size=(3, 3))(inputs)  # 32x32 -> 96x96
-    
-    # Load pre-trained MobileNetV2
-    base_model = MobileNetV2(
-        input_shape=(96, 96, 3),
-        include_top=False,
-        weights='imagenet'
-    )
-    
-    # Freeze base model
-    base_model.trainable = False
-    
-    # Add base model
-    x = base_model(x, training=False)
-    
-    # Custom classification head
-    x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dense(256, activation='relu')(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.Dropout(0.5)(x)
-    outputs = layers.Dense(num_classes, activation='softmax')(x)
-    
-    model = keras.Model(inputs, outputs, name='MobileNet_Transfer')
-    
-    return model
-
-
-if __name__ == "__main__":
-    # Test model creation
-    print("Testing Custom CNN...")
-    cnn = create_cnn_model()
-    cnn.summary()
-    
-    print("\n" + "="*70 + "\n")
-    
-    print("Testing MobileNet...")
-    mobilenet = create_mobilenet_model()
-    mobilenet.summary()
+    def get_callbacks(self, model_path='models/best_model.h5'):
+        """
+        Get training callbacks
+        
+        Returns:
+            list of callbacks
+        """
+        callbacks = [
+            EarlyStopping(
+                monitor='val_loss',
+                patience=10,
+                restore_best_weights=True,
+                verbose=1
+            ),
+            ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.5,
+                patience=5,
+                min_lr=1e-7,
+                verbose=1
+            ),
+            ModelCheckpoint(
+                model_path,
+                monitor='val_accuracy',
+                save_best_only=True,
+                verbose=1
+            )
+        ]
+        return callbacks
