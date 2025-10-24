@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 import os
 from sklearn.model_selection import train_test_split
-import config
+import config as config
 
 def load_images_from_csv(csv_path, data_dir):
     """Load images from CSV file"""

@@ -10,7 +10,7 @@ import plotly.express as px
 import pandas as pd
 from src.evaluate import load_evaluation_results
 from src.data_loader import preprocess_single_image
-import config
+import config as config
 
 # Page config
 st.set_page_config(
@@ -404,42 +404,64 @@ def evaluation_tab_enhanced(results):
     model_results = results[selected_model]
     
     # Key metrics with styled cards
-    st.subheader(" Performance Metrics")
+    st.subheader("📊 Performance Metrics")
     col1, col2, col3, col4 = st.columns(4)
     
-    metrics_data = [
-        ("🎯 Accuracy", f"{model_results['accuracy']:.2f}%", "green"),
-        ("⚡ Speed", f"{model_results['avg_inference_per_image']:.2f}ms", "blue"),
-        ("🧠 Params", f"{model_results['total_params']:,}", "orange"),
-        ("📊 F1-Score", f"{model_results['f1_score']:.2f}%", "purple")
-    ]
-    
-    for col, (label, value, color) in zip([col1, col2, col3, col4], metrics_data):
-        with col:
-            st.metric(label, value)
+    with col1:
+        st.metric("🎯 Accuracy", f"{model_results['accuracy']:.2f}%")
+    with col2:
+        st.metric("⚡ Speed", f"{model_results['avg_inference_per_image']:.2f}ms")
+    with col3:
+        st.metric("🧠 Params", f"{model_results['total_params']:,}")
+    with col4:
+        st.metric("📊 F1-Score", f"{model_results['f1_score']:.2f}%")
     
     st.markdown("---")
     
-    # Confusion Matrix
-    st.subheader(" Confusion Matrix Heatmap")
+    # Confusion Matrix - BRIGHT VERSION
+    st.subheader("🔥 Confusion Matrix Heatmap")
     
     cm = np.array(model_results['confusion_matrix'])
     
-    # Create interactive heatmap
     fig = px.imshow(
         cm,
-        labels=dict(x="Predicted Class", y="True Class", color="Count"),
-        x=[i for i in range(config.NUM_CLASSES)],
-        y=[i for i in range(config.NUM_CLASSES)],
-        color_continuous_scale='RdYlGn',
-        aspect='auto'
+        labels=dict(x="Predicted Class", y="True Class", color="Predictions"),
+        x=list(range(config.NUM_CLASSES)),
+        y=list(range(config.NUM_CLASSES)),
+        color_continuous_scale='Viridis',  # Bright colors
+        aspect='auto',
+        text_auto=True
     )
-    
-    fig.update_layout(height=700)
+
+    fig.update_layout(
+        height=700,
+        title="Confusion Matrix - All 43 Traffic Sign Classes",
+        xaxis=dict(
+            title="Predicted Class",
+            tickmode='linear',
+            tick0=0,
+            dtick=2
+        ),
+        yaxis=dict(
+            title="True Class", 
+            tickmode='linear',
+            tick0=0,
+            dtick=2
+        )
+    )
+
     st.plotly_chart(fig, use_container_width=True)
     
+    # Add interpretation
+    col1, col2 = st.columns(2)
+    with col1:
+        st.success("✅ **Diagonal (Bright)** = Correct predictions")
+    with col2:
+        st.error("❌ **Off-diagonal (Dark)** = Misclassifications")
+    
     # Class accuracy analysis
-    st.subheader(" Per-Class Performance Analysis")
+    st.markdown("---")
+    st.subheader("📊 Per-Class Performance Analysis")
     
     class_acc = model_results['per_class_accuracy']
     
@@ -463,6 +485,7 @@ def evaluation_tab_enhanced(results):
             st.progress(float(acc/100))
     
     # Full class accuracy chart
+    st.markdown("---")
     st.subheader("📈 All Classes Accuracy Distribution")
     
     classes = list(class_acc.keys())

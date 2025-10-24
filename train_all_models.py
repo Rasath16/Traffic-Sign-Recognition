@@ -5,7 +5,7 @@ from src.data_loader import load_and_preprocess_data
 from src.models import create_simple_cnn, create_deep_cnn, create_mobilenet
 from src.train import train_model
 from src.evaluate import evaluate_model, save_all_results
-import config
+import config as config
 
 def main():
     print("\n" + "="*60)

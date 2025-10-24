@@ -1,6 +1,6 @@
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import time
-import config
+import config as config
 
 def train_model(model, model_name, X_train, y_train, X_val, y_val, save_path):
     """

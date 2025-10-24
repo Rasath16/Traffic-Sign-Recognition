@@ -5,7 +5,7 @@ from sklearn.metrics import (
 )
 import json
 import time
-import config
+import config as config
 
 def evaluate_model(model, model_name, X_test, y_test):
     """

@@ -2,7 +2,7 @@ from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization, GlobalAveragePooling2D
 from keras.applications import MobileNetV2
 from keras.optimizers import Adam
-import config
+import config as config
 import numpy as np
 
 
