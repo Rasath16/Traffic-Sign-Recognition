@@ -1,6 +1,3 @@
-"""
-Model architectures: Simple CNN, Deep CNN, MobileNet
-"""
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization, GlobalAveragePooling2D
 from keras.applications import MobileNetV2

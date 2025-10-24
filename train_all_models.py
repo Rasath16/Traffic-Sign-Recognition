@@ -1,7 +1,3 @@
-"""
-Script to train all three models
-Run this first: python train_all_models.py
-"""
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 

@@ -1,6 +1,3 @@
-"""
-Training functions
-"""
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import time
 import config

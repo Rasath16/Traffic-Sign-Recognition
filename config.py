@@ -1,6 +1,3 @@
-"""
-Configuration file - All settings in one place
-"""
 import os
 
 # ============= PATHS =============

@@ -1,13 +1,10 @@
-"""
-Enhanced version with more features
-"""
 import streamlit as st
 import numpy as np
 from PIL import Image
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
