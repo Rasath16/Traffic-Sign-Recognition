@@ -12,6 +12,7 @@ from src.evaluate import load_evaluation_results
 from src.data_loader import preprocess_single_image
 import config as config
 
+
 # Page config
 st.set_page_config(
     page_title=" Traffic Sign Recognition",
@@ -206,7 +207,7 @@ def prediction_tab_enhanced(models, results):
         
         if uploaded_file:
             image = Image.open(uploaded_file)
-            st.image(image, caption='📸 Your Image', use_column_width=True)
+            st.image(image, caption='📸 Your Image', use_container_width=True)
             
             # Image info
             st.info(f"📐 Size: {image.size[0]} x {image.size[1]} pixels")
@@ -403,7 +404,7 @@ def evaluation_tab_enhanced(results):
     
     model_results = results[selected_model]
     
-    # Key metrics with styled cards
+    # Key metrics
     st.subheader("📊 Performance Metrics")
     col1, col2, col3, col4 = st.columns(4)
     
@@ -418,55 +419,128 @@ def evaluation_tab_enhanced(results):
     
     st.markdown("---")
     
-    # Confusion Matrix - BRIGHT VERSION
-    st.subheader("🔥 Confusion Matrix Heatmap")
+    # Confusion Matrix - AS INTERACTIVE TABLE
+    st.subheader("🔥 Confusion Matrix")
     
     cm = np.array(model_results['confusion_matrix'])
     
-    fig = px.imshow(
+    # Create DataFrame with nice labels
+    cm_df = pd.DataFrame(
         cm,
-        labels=dict(x="Predicted Class", y="True Class", color="Predictions"),
-        x=list(range(config.NUM_CLASSES)),
-        y=list(range(config.NUM_CLASSES)),
-        color_continuous_scale='Viridis',  # Bright colors
-        aspect='auto',
-        text_auto=True
+        index=[f"True {i}" for i in range(config.NUM_CLASSES)],
+        columns=[f"Pred {i}" for i in range(config.NUM_CLASSES)]
     )
-
-    fig.update_layout(
-        height=700,
-        title="Confusion Matrix - All 43 Traffic Sign Classes",
-        xaxis=dict(
-            title="Predicted Class",
-            tickmode='linear',
-            tick0=0,
-            dtick=2
-        ),
-        yaxis=dict(
-            title="True Class", 
-            tickmode='linear',
-            tick0=0,
-            dtick=2
+    
+    # Show with color gradient
+    st.dataframe(
+        cm_df.style.background_gradient(
+            cmap='YlOrRd',
+            axis=None,
+            vmin=0,
+            vmax=cm.max()
+        ).set_properties(**{
+            'font-size': '10px',
+            'text-align': 'center'
+        }).format("{:.0f}"),
+        height=600,
+        use_container_width=True
+    )
+    
+    st.caption("📊 **How to read:** Yellow = low counts | Orange = medium | Red = high counts | Diagonal should be darkest (correct predictions)")
+    
+    # Key statistics from confusion matrix
+    st.markdown("---")
+    st.subheader("📈 Confusion Matrix Statistics")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        correct_predictions = cm.diagonal().sum()
+        total_predictions = cm.sum()
+        st.metric("✅ Correct Predictions", f"{correct_predictions:,}")
+        st.metric("Accuracy", f"{(correct_predictions/total_predictions)*100:.2f}%")
+    
+    with col2:
+        # Most confused pairs
+        cm_off_diag = cm.copy()
+        np.fill_diagonal(cm_off_diag, 0)
+        max_confusion_idx = np.unravel_index(cm_off_diag.argmax(), cm_off_diag.shape)
+        
+        st.metric("❌ Worst Confusion", f"{cm_off_diag[max_confusion_idx]} errors")
+        st.caption(f"True class {max_confusion_idx[0]} → Predicted as {max_confusion_idx[1]}")
+    
+    with col3:
+        # Best performing class
+        class_acc = cm.diagonal() / cm.sum(axis=1)
+        best_class = class_acc.argmax()
+        
+        st.metric("🏆 Best Class", f"Class {best_class}")
+        st.caption(f"{config.CLASS_NAMES[best_class][:30]}...")
+        st.metric("Accuracy", f"{class_acc[best_class]*100:.2f}%")
+    
+    # Show diagonal values chart
+    st.markdown("---")
+    st.subheader("🎯 Correct Predictions per Class")
+    
+    diagonal_values = cm.diagonal()
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            x=list(range(config.NUM_CLASSES)),
+            y=diagonal_values,
+            marker=dict(
+                color=diagonal_values,
+                colorscale='Greens',
+                showscale=True,
+                colorbar=dict(title="Correct<br>Count")
+            ),
+            hovertext=[f"Class {i}: {config.CLASS_NAMES[i]}<br>Correct: {v}" 
+                      for i, v in enumerate(diagonal_values)],
+            hoverinfo='text'
         )
+    ])
+    
+    fig.update_layout(
+        xaxis_title="Class Index",
+        yaxis_title="Number of Correct Predictions",
+        height=400
     )
-
+    
     st.plotly_chart(fig, use_container_width=True)
     
-    # Add interpretation
-    col1, col2 = st.columns(2)
-    with col1:
-        st.success("✅ **Diagonal (Bright)** = Correct predictions")
-    with col2:
-        st.error("❌ **Off-diagonal (Dark)** = Misclassifications")
+    # Most confused pairs
+    st.markdown("---")
+    st.subheader("⚠️ Top 10 Most Confused Class Pairs")
     
-    # Class accuracy analysis
+    # Get off-diagonal confusion pairs
+    confusion_pairs = []
+    for i in range(config.NUM_CLASSES):
+        for j in range(config.NUM_CLASSES):
+            if i != j and cm[i, j] > 0:
+                confusion_pairs.append({
+                    'True Class': i,
+                    'True Sign': config.CLASS_NAMES[i],
+                    'Predicted As': j,
+                    'Predicted Sign': config.CLASS_NAMES[j],
+                    'Count': int(cm[i, j]),
+                    'True Class Accuracy': f"{class_acc[i]*100:.1f}%"
+                })
+    
+    # Sort by count
+    confusion_pairs.sort(key=lambda x: x['Count'], reverse=True)
+    
+    if confusion_pairs:
+        confusion_df = pd.DataFrame(confusion_pairs[:10])
+        st.dataframe(confusion_df, use_container_width=True, hide_index=True)
+    else:
+        st.success("🎉 Perfect! No confusion between classes!")
+    
+    # Per-class accuracy
     st.markdown("---")
     st.subheader("📊 Per-Class Performance Analysis")
     
-    class_acc = model_results['per_class_accuracy']
-    
-    # Get best and worst performing classes
-    sorted_classes = sorted(class_acc.items(), key=lambda x: x[1], reverse=True)
+    class_acc_dict = model_results['per_class_accuracy']
+    sorted_classes = sorted(class_acc_dict.items(), key=lambda x: x[1], reverse=True)
     best_5 = sorted_classes[:5]
     worst_5 = sorted_classes[-5:]
     
@@ -476,39 +550,46 @@ def evaluation_tab_enhanced(results):
         st.success("🏆 Top 5 Best Performing Classes")
         for sign, acc in best_5:
             st.write(f"**{sign}**: {acc:.2f}%")
-            st.progress(float(acc/100))
+            st.progress(min(acc/100, 1.0))
     
     with col2:
         st.error("⚠️ Top 5 Challenging Classes")
         for sign, acc in worst_5:
             st.write(f"**{sign}**: {acc:.2f}%")
-            st.progress(float(acc/100))
+            st.progress(min(acc/100, 1.0))
     
-    # Full class accuracy chart
+    # Full distribution
     st.markdown("---")
     st.subheader("📈 All Classes Accuracy Distribution")
     
-    classes = list(class_acc.keys())
-    accuracies = [class_acc[c] for c in classes]
+    classes = list(class_acc_dict.keys())
+    accuracies = [class_acc_dict[c] for c in classes]
     
-    fig = go.Figure(data=[
+    fig2 = go.Figure(data=[
         go.Bar(
             x=list(range(len(classes))),
             y=accuracies,
-            marker=dict(color=accuracies, colorscale='Viridis'),
-            hovertext=classes,
-            hoverinfo='text+y'
+            marker=dict(
+                color=accuracies,
+                colorscale='RdYlGn',
+                cmin=0,
+                cmax=100,
+                showscale=True,
+                colorbar=dict(title="Accuracy %")
+            ),
+            hovertext=[f"{c}<br>{a:.1f}%" for c, a in zip(classes, accuracies)],
+            hoverinfo='text'
         )
     ])
     
-    fig.update_layout(
-        title="Accuracy Across All 43 Sign Classes",
+    fig2.update_layout(
         xaxis_title="Class Index",
         yaxis_title="Accuracy (%)",
-        height=400
+        height=400,
+        yaxis=dict(range=[0, 105])
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig2, use_container_width=True)
 
 if __name__ == "__main__":
     main()
