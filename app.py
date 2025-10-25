@@ -31,7 +31,7 @@ st.markdown("""
     }
     
     .main-header {
-        font-size: 3.5rem;
+        font-size: 3.5rem !important;
         font-weight: 700;
         text-align: center;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -448,92 +448,7 @@ def evaluation_tab_enhanced(results):
     
     st.caption("📊 **How to read:** Yellow = low counts | Orange = medium | Red = high counts | Diagonal should be darkest (correct predictions)")
     
-    # Key statistics from confusion matrix
-    st.markdown("---")
-    st.subheader("📈 Confusion Matrix Statistics")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        correct_predictions = cm.diagonal().sum()
-        total_predictions = cm.sum()
-        st.metric("✅ Correct Predictions", f"{correct_predictions:,}")
-        st.metric("Accuracy", f"{(correct_predictions/total_predictions)*100:.2f}%")
-    
-    with col2:
-        # Most confused pairs
-        cm_off_diag = cm.copy()
-        np.fill_diagonal(cm_off_diag, 0)
-        max_confusion_idx = np.unravel_index(cm_off_diag.argmax(), cm_off_diag.shape)
-        
-        st.metric("❌ Worst Confusion", f"{cm_off_diag[max_confusion_idx]} errors")
-        st.caption(f"True class {max_confusion_idx[0]} → Predicted as {max_confusion_idx[1]}")
-    
-    with col3:
-        # Best performing class
-        class_acc = cm.diagonal() / cm.sum(axis=1)
-        best_class = class_acc.argmax()
-        
-        st.metric("🏆 Best Class", f"Class {best_class}")
-        st.caption(f"{config.CLASS_NAMES[best_class][:30]}...")
-        st.metric("Accuracy", f"{class_acc[best_class]*100:.2f}%")
-    
-    # Show diagonal values chart
-    st.markdown("---")
-    st.subheader("🎯 Correct Predictions per Class")
-    
-    diagonal_values = cm.diagonal()
-    
-    fig = go.Figure(data=[
-        go.Bar(
-            x=list(range(config.NUM_CLASSES)),
-            y=diagonal_values,
-            marker=dict(
-                color=diagonal_values,
-                colorscale='Greens',
-                showscale=True,
-                colorbar=dict(title="Correct<br>Count")
-            ),
-            hovertext=[f"Class {i}: {config.CLASS_NAMES[i]}<br>Correct: {v}" 
-                      for i, v in enumerate(diagonal_values)],
-            hoverinfo='text'
-        )
-    ])
-    
-    fig.update_layout(
-        xaxis_title="Class Index",
-        yaxis_title="Number of Correct Predictions",
-        height=400
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Most confused pairs
-    st.markdown("---")
-    st.subheader("⚠️ Top 10 Most Confused Class Pairs")
-    
-    # Get off-diagonal confusion pairs
-    confusion_pairs = []
-    for i in range(config.NUM_CLASSES):
-        for j in range(config.NUM_CLASSES):
-            if i != j and cm[i, j] > 0:
-                confusion_pairs.append({
-                    'True Class': i,
-                    'True Sign': config.CLASS_NAMES[i],
-                    'Predicted As': j,
-                    'Predicted Sign': config.CLASS_NAMES[j],
-                    'Count': int(cm[i, j]),
-                    'True Class Accuracy': f"{class_acc[i]*100:.1f}%"
-                })
-    
-    # Sort by count
-    confusion_pairs.sort(key=lambda x: x['Count'], reverse=True)
-    
-    if confusion_pairs:
-        confusion_df = pd.DataFrame(confusion_pairs[:10])
-        st.dataframe(confusion_df, use_container_width=True, hide_index=True)
-    else:
-        st.success("🎉 Perfect! No confusion between classes!")
+
     
     # Per-class accuracy
     st.markdown("---")
