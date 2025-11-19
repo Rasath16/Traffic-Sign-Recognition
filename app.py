@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from PIL import Image
+import cv2 # Changed from PIL.Image to cv2
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -206,11 +206,34 @@ def prediction_tab_enhanced(models, results):
         )
         
         if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, caption='📸 Your Image', use_container_width=True)
+            # --- START OpenCV Logic for Display ---
+            # IMPORTANT: Streamlit's file_uploader is a BytesIO-like object. 
+            # We need to read the bytes and decode with cv2.
             
-            # Image info
-            st.info(f"📐 Size: {image.size[0]} x {image.size[1]} pixels")
+            # Read file bytes (must reset pointer first)
+            uploaded_file.seek(0)
+            file_bytes = uploaded_file.read()
+            np_array = np.frombuffer(file_bytes, np.uint8)
+            
+            # Decode the image with OpenCV (IMREAD_COLOR is 3-channel BGR)
+            image_bgr = cv2.imdecode(np_array, cv2.IMREAD_COLOR) 
+
+            if image_bgr is None:
+                st.error("Could not decode image.")
+                return
+
+            # Convert BGR to RGB for Streamlit display
+            image_rgb_display = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+            
+            st.image(image_rgb_display, caption='📸 Your Image', use_container_width=True)
+            
+            # Get original image size from numpy array
+            h, w, _ = image_bgr.shape 
+            st.info(f"📐 Size: {w} x {h} pixels")
+            
+            # Reset the file pointer to the start for the next read in preprocess_single_image
+            uploaded_file.seek(0)
+            # --- END OpenCV Logic for Display ---
     
     with col2:
         st.subheader(" Prediction Results")
@@ -221,6 +244,9 @@ def prediction_tab_enhanced(models, results):
                                    type="primary")
             
             if predict_btn:
+                # CRITICAL: Reset the file pointer to the start before prediction preprocessing
+                uploaded_file.seek(0)
+                
                 with st.spinner("🧠 AI is analyzing your image..."):
                     # Progress bar
                     progress_bar = st.progress(0)
@@ -228,6 +254,7 @@ def prediction_tab_enhanced(models, results):
                         progress_bar.progress(i + 1)
                     
                     # Predict
+                    # preprocess_single_image in data_loader.py must now handle the file object using cv2.imdecode
                     img_array = preprocess_single_image(uploaded_file)
                     model = models[model_choice]
                     predictions = model.predict(img_array, verbose=0)[0]

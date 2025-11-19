@@ -5,3 +5,4 @@ Pillow
 scikit-learn
 plotly
 scikit-image
+opencv-python
