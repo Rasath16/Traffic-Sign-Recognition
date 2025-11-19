@@ -2,28 +2,24 @@
 
 A Deep Learning project for classifying 43 types of German traffic signs using Convolutional Neural Networks (CNNs) and Transfer Learning.
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15-orange.svg)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.29-red.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
-
 ## 🎯 Features
 
-- ✅ **3 Different Model Architectures** - Simple CNN, Deep CNN, and MobileNet
-- ✅ **Interactive Web Interface** - Built with Streamlit
-- ✅ **Comprehensive Evaluation** - Accuracy, Precision, Recall, F1-Score
-- ✅ **Model Comparison Dashboard** - Compare all models side-by-side
-- ✅ **Real-time Predictions** - Upload and classify traffic signs instantly
-- ✅ **Image Format Support** - Handles PNG (with transparency), JPG, JPEG
-- ✅ **Detailed Analytics** - Confusion matrix analysis and per-class accuracy
+  - ✅ **3 Different Model Architectures** - Simple CNN, Deep CNN, and MobileNet
+  - ✅ **Interactive Web Interface** - Built with Streamlit
+  - ✅ **Comprehensive Evaluation** - Accuracy, Precision, Recall, F1-Score
+  - ✅ **Model Comparison Dashboard** - Compare all models side-by-side
+  - ✅ **Real-time Predictions** - Upload and classify traffic signs instantly
+  - ✅ **OpenCV Integration** - Uses **OpenCV** for fast and robust image loading/preprocessing.
+  - ✅ **Image Format Support** - Handles PNG (with transparency), JPG, JPEG
+  - ✅ **Detailed Analytics** - Confusion matrix analysis and per-class accuracy
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- pip package manager
-- 2GB+ RAM (4GB recommended)
+  - Python 3.8 or higher
+  - pip package manager
+  - 2GB+ RAM (4GB recommended)
 
 ### Installation
 
@@ -37,6 +33,7 @@ cd traffic-sign-recognition
 **Step 2: Install dependencies**
 
 ```bash
+# Ensure opencv-python is included in your requirements.txt
 pip install -r requirements.txt
 ```
 
@@ -69,15 +66,19 @@ streamlit run app.py
 
 🌐 The app will open at `http://localhost:8501`
 
-## 📊 Model Performance
+-----
 
-| Model          | Test Accuracy | Precision | Recall | F1-Score | Inference Speed | Parameters |
-| -------------- | ------------- | --------- | ------ | -------- | --------------- | ---------- |
-| **Simple CNN** | 97.21%        | 97.31%    | 97.21% | 97.20%   | 0.62 ms         | 549,355    |
-| **Deep CNN**   | 98.96%        | 98.99%    | 98.96% | 98.96%   | 0.87 ms         | 677,323    |
-| **MobileNet**  | 32.31%\*      | 30.56%    | 32.31% | 29.99%   | 0.66 ms         | 2,427,499  |
+## 📊 Model Performance (Latest Results)
 
-_Note: MobileNet requires further tuning for better performance on 32×32 images_
+| Model | Test Accuracy | Precision | Recall | F1-Score | Inference Speed | Parameters |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Simple CNN** | 97.14% | 97.19% | 97.14% | 97.11% | **0.14 ms** | 549,355 |
+| **Deep CNN** | **98.73%** | **98.75%** | **98.73%** | **98.72%** | 0.42 ms | 677,323 |
+| **MobileNet** | 30.66%\* | 28.57% | 30.66% | 28.19% | 0.76 ms | 2,427,499 |
+
+*Note: MobileNet requires further tuning for better performance on 32×32 images, as its architecture is optimized for larger inputs (e.g., 224x224).*
+
+-----
 
 ## 🏗️ Project Structure
 
@@ -94,7 +95,7 @@ traffic-sign-recognition/
 │
 ├── src/
 │   ├── __init__.py
-│   ├── data_loader.py      # Data loading and preprocessing
+│   ├── data_loader.py      # Data loading and preprocessing (Uses OpenCV)
 │   ├── models.py           # CNN architectures
 │   ├── train.py            # Training functions
 │   └── evaluate.py         # Evaluation metrics
@@ -113,6 +114,8 @@ traffic-sign-recognition/
 ├── requirements.txt        # Python dependencies
 └── README.md              # This file
 ```
+
+-----
 
 ## 🎨 Web Application
 
@@ -232,19 +235,23 @@ pip install -r requirements.txt --upgrade
 
 ### RGBA image error
 
-✅ **Already handled!** The code automatically converts RGBA images to RGB.
+✅ **Already handled\!** The image preprocessing pipeline uses **OpenCV** to automatically convert RGBA/BGR images to the expected RGB format, effectively handling transparency and ensuring 3-channel input.
+
+-----
 
 ## 📦 Dependencies
 
-```
+```text
 tensorflow==2.15.0      # Deep learning framework
 streamlit==1.29.0       # Web application framework
 pandas==2.1.4           # Data manipulation
 numpy==1.24.3           # Numerical computing
-Pillow==10.1.0          # Image processing
+opencv-python           # Image processing and handling (Used for faster preprocessing)
 scikit-learn==1.3.2     # Machine learning utilities
 plotly==5.18.0          # Interactive visualizations
 ```
+
+-----
 
 ## 🎓 Use Cases
 
@@ -300,3 +307,4 @@ For questions or feedback:
 - LinkedIn: [[Your LinkedIn Profile](https://www.linkedin.com/in/tharusha-rasath-5b9643243/)]
 
 **⭐ If you found this project helpful, please give it a star!**
+**⭐ If you found this project helpful, please give it a star\!**
