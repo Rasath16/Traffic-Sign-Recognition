@@ -3,9 +3,7 @@ import time
 import config as config
 
 def train_model(model, model_name, X_train, y_train, X_val, y_val, save_path):
-    """
-    Train a model with callbacks
-    """
+
     print("\n" + "="*50)
     print(f"🚀 TRAINING: {model_name}")
     print("="*50)

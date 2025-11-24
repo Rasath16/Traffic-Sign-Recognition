@@ -7,10 +7,7 @@ import numpy as np
 
 
 def create_simple_cnn():
-    """
-    Simple CNN - Good baseline model
-    2 Conv blocks, easy to train
-    """
+
     print("\n🏗️  Building SIMPLE CNN...")
     
     model = Sequential([
@@ -41,10 +38,7 @@ def create_simple_cnn():
     return model
 
 def create_deep_cnn():
-    """
-    Deep CNN - More complex architecture
-    4 Conv blocks with BatchNormalization
-    """
+
     print("\n🏗️  Building DEEP CNN...")
     
     model = Sequential([
@@ -90,10 +84,7 @@ def create_deep_cnn():
     return model
 
 def create_mobilenet():
-    """
-    Transfer Learning with MobileNetV2
-    Pre-trained on ImageNet
-    """
+
     print("\n🏗️  Building MOBILENET (Transfer Learning)...")
     
     # Load pre-trained base

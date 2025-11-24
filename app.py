@@ -173,7 +173,6 @@ def main():
     
     
 def prediction_tab_enhanced(models, results):
-    """Enhanced prediction tab with better UI"""
     st.header(" Upload & Predict Traffic Sign")
     
     # Model selection at top
@@ -206,11 +205,6 @@ def prediction_tab_enhanced(models, results):
         )
         
         if uploaded_file:
-            # --- START OpenCV Logic for Display ---
-            # IMPORTANT: Streamlit's file_uploader is a BytesIO-like object. 
-            # We need to read the bytes and decode with cv2.
-            
-            # Read file bytes (must reset pointer first)
             uploaded_file.seek(0)
             file_bytes = uploaded_file.read()
             np_array = np.frombuffer(file_bytes, np.uint8)
@@ -233,7 +227,7 @@ def prediction_tab_enhanced(models, results):
             
             # Reset the file pointer to the start for the next read in preprocess_single_image
             uploaded_file.seek(0)
-            # --- END OpenCV Logic for Display ---
+
     
     with col2:
         st.subheader(" Prediction Results")
@@ -313,7 +307,6 @@ def prediction_tab_enhanced(models, results):
             st.info("👆 Upload an image to get started!")
 
 def comparison_tab_enhanced(results):
-    """Enhanced comparison with better visualizations"""
     st.header("🏆 Model Performance Showdown")
     
     # Quick comparison cards
@@ -420,7 +413,6 @@ def comparison_tab_enhanced(results):
     )
 
 def evaluation_tab_enhanced(results):
-    """Enhanced evaluation with more insights"""
     st.header("📈 Deep Dive: Model Evaluation")
     
     # Model selector

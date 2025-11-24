@@ -1,6 +1,6 @@
 import os
 
-# ============= PATHS =============
+# PATHS
 DATA_DIR = "data/GTSRB"
 TRAIN_CSV = os.path.join(DATA_DIR, "Train.csv")
 TEST_CSV = os.path.join(DATA_DIR, "Test.csv")
@@ -19,7 +19,7 @@ RESULTS_DIR = "results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 EVALUATION_FILE = os.path.join(RESULTS_DIR, "evaluation_results.json")
 
-# ============= MODEL SETTINGS =============
+# MODEL SETTINGS
 IMG_SIZE = (32, 32)
 NUM_CLASSES = 43
 BATCH_SIZE = 64
@@ -27,7 +27,7 @@ EPOCHS = 30
 LEARNING_RATE = 0.001
 VALIDATION_SPLIT = 0.2
 
-# ============= CLASS NAMES =============
+# CLASS NAMES 
 CLASS_NAMES = {
     0: 'Speed limit (20km/h)', 1: 'Speed limit (30km/h)',
     2: 'Speed limit (50km/h)', 3: 'Speed limit (60km/h)',

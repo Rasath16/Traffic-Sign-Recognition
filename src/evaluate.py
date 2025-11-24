@@ -8,10 +8,7 @@ import time
 import config as config
 
 def evaluate_model(model, model_name, X_test, y_test):
-    """
-    Comprehensive model evaluation
-    Returns dictionary with all metrics
-    """
+
     print(f"\n📊 Evaluating {model_name}...")
     
     # Predictions
@@ -55,13 +52,11 @@ def evaluate_model(model, model_name, X_test, y_test):
     return results
 
 def save_all_results(results_dict):
-    """Save evaluation results to JSON"""
     with open(config.EVALUATION_FILE, 'w') as f:
         json.dump(results_dict, f, indent=4)
     print(f"\n💾 Results saved to: {config.EVALUATION_FILE}")
 
 def load_evaluation_results():
-    """Load saved evaluation results"""
     try:
         with open(config.EVALUATION_FILE, 'r') as f:
             return json.load(f)

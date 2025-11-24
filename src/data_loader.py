@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 import config as config
 
 def load_images_from_csv(csv_path, data_dir):
-    """Load images from CSV file using OpenCV"""
     df = pd.read_csv(csv_path)
     images = []
     labels = []
@@ -19,26 +18,19 @@ def load_images_from_csv(csv_path, data_dir):
     for idx, row in df.iterrows():
         img_path = os.path.join(data_dir, row['Path'])
         try:
-            # 1. Load image using OpenCV (IMREAD_UNCHANGED keeps original channels)
             img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
             
             if img is None:
-                 # print(f"Warning: Skipping {img_path}. Image not found or could not be loaded.")
                  continue
                  
-            # 2. Handle Grayscale (1 channel) by converting to BGR
             if len(img.shape) == 2:
                 img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
                 
-            # 3. Handle BGRA (4 channels, e.g., PNG with transparency) by converting to BGR (removes alpha channel)
             elif img.shape[2] == 4:
                 img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-            
-            # 4. Convert BGR (OpenCV default) to RGB (Model's expectation)
-            # This is essential for compatibility with models trained on RGB data.
+
             img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             
-            # 5. Resize
             img_resized = cv2.resize(img_rgb, config.IMG_SIZE)
             
             images.append(img_resized)
@@ -53,10 +45,6 @@ def load_images_from_csv(csv_path, data_dir):
     return np.array(images), np.array(labels)
 
 def load_and_preprocess_data():
-    """
-    Main function to load all data
-    Returns: X_train, X_val, X_test, y_train, y_val, y_test
-    """
     print("\n" + "="*50)
     print("📂 LOADING DATA")
     print("="*50)
@@ -99,34 +87,25 @@ def load_and_preprocess_data():
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def preprocess_single_image(image_file):
-    """
-    Preprocess a single image for prediction using OpenCV.
-    Accepts a file-like object (e.g., from Streamlit upload).
-    """
-    # CRITICAL: Reset the file pointer to the beginning for cv2.imdecode
+
     image_file.seek(0)
-    # 1. Read file bytes and decode with OpenCV
     file_bytes = np.asarray(bytearray(image_file.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_UNCHANGED)
     
     if img is None:
         raise ValueError("Could not decode image from uploaded file.")
         
-    # 2. Handle Grayscale (1 channel) by converting to BGR
     if len(img.shape) == 2:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         
-    # 3. Handle BGRA (4 channels) by converting to BGR (removes alpha channel)
     elif img.shape[2] == 4:
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
         
-    # 4. Convert BGR to RGB (required for the Keras model)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    # 5. Resize
+
     img_resized = cv2.resize(img_rgb, config.IMG_SIZE)
     
-    # 6. Normalize and add batch dimension
     img_array = img_resized.astype('float32') / 255.0
     img_array = np.expand_dims(img_array, axis=0)
     return img_array
