@@ -2,6 +2,9 @@
 
 A Deep Learning project for classifying 43 types of German traffic signs using Convolutional Neural Networks (CNNs) and Transfer Learning.
 
+## Demo Video 👇
+https://github.com/user-attachments/assets/b2643375-c0f8-4e9e-96b1-89931d894690
+
 ## 🎯 Features
 
   - ✅ **3 Different Model Architectures** - Simple CNN, Deep CNN, and MobileNet
